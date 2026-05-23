@@ -4,15 +4,19 @@ import { StatusBar } from 'expo-status-bar';
 import Checkbox from 'expo-checkbox';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import TaskList from './src/components/TaskList';
-import { addTask, deleteTask, getAllTasks, updateTask, TaskItem } from './src/utils/handle-api';
+import { TaskItem } from './src/utils/handle-api';
 import { globalStyles } from './src/styles/global';
 import AboutScreen from './src/components/AboutScreen';
-
-// TODO (Zustand): Importe o seu useTaskStore aqui
+// TODO (Zustand): Remova este useState e utilize o seletor da sua store para pegar as tasks
+import { useTaskStore } from './src/store/useTaskStore';
 
 export default function App() {
   // TODO (Zustand): Remova este useState e utilize o seletor da sua store para pegar as tasks
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const tasks = useTaskStore((state) => state.tasks);
+  const loadTasks = useTaskStore((state) => state.loadTasks);
+  const addTask = useTaskStore((state) => state.addTask);
+  const updateTask = useTaskStore((state) => state.updateTask);
+  const deleteTask = useTaskStore((state) => state.deleteTask);
   const [text, setText] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [taskId, setTaskId] = useState("");
@@ -28,9 +32,17 @@ export default function App() {
   const [priority, setPriority] = useState<'Baixa' | 'Média' | 'Alta'>('Baixa');
 
   useEffect(() => {
-    // TODO (Zustand): Atualize esta chamada para usar a action correspondente da store
-    getAllTasks(setTasks, setLoading);
-  }, []);
+    const bootstrap = async () => {
+      try {
+        await loadTasks();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void bootstrap();
+  }, [loadTasks]);
+
 
   const resetForm = () => {
     setText("");
@@ -53,12 +65,16 @@ export default function App() {
 
   const handleSave = () => {
     const formattedDate = dueDate ? dueDate.toISOString() : null;
+    const payload = {
+      text,
+      completed,
+      dueDate: formattedDate,
+    };
+    // TODO (Zustand): Substitua a chamada abaixo pela action de atualizar da sua store
     if (isUpdating) {
-      // TODO (Zustand): Substitua a chamada abaixo pela action de atualizar da sua store
-      updateTask(taskId, text, completed, formattedDate, setTasks, resetForm);
+      void updateTask(taskId, payload).then(resetForm);
     } else {
-      // TODO (Zustand): Substitua a chamada abaixo pela action de adicionar da sua store
-      addTask(text, completed, formattedDate, setTasks, resetForm);
+      void addTask(payload).then(resetForm);
     }
   };
 
@@ -127,7 +143,7 @@ export default function App() {
               pressed && styles.deleteButtonPressed
             ]}
             // TODO (Zustand): Chame a action de deletar todas as tarefas da sua store
-            onPress={() => setTasks([])} 
+            onPress={() => Promise.all(tasks.map((task) => deleteTask(task._id)))} 
           >
             <Text style={styles.actionButtonText}>Excluir todas</Text>
           </Pressable>
@@ -136,21 +152,12 @@ export default function App() {
         <View style={styles.aboutButtonContainer}>
           <Button title="Sobre o App" onPress={() => setAboutModalVisible(true)} />
         </View>
-
-        {/* TODO (Zustand): Remova as props tasks, onUpdate e onDelete após refatorar o TaskList */}
-        <TaskList 
-          tasks={tasks.filter(t => {
-            if (filter === 'completed') return t.completed;
-            if (filter === 'pending') return !t.completed;
-            return true;
-          })} 
-          onUpdate={updateMode} 
-          onDelete={(id) => deleteTask(id, setTasks)} 
-        />
+        <TaskList filter={filter} />
 
         {loading && (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#000" />
+          <View style={styles.loaderInlineContainer}>
+            <ActivityIndicator size="small" color="#000" />
+            <Text style={styles.loaderText}>Carregando tarefas...</Text>
           </View>
         )}
       </View>
@@ -383,16 +390,17 @@ const styles = StyleSheet.create({
     elevation: 1,
     shadowOpacity: 0.1,
   },
-  loaderContainer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    justifyContent: 'center',
+  loaderInlineContainer: {
+    marginTop: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    zIndex: 10,
+    justifyContent: 'center',
+    gap: 8,
+  },
+  loaderText: {
+    fontSize: 14,
+    color: '#666',
   },
   modalOverlay: {
     flex: 1,
