@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { TaskItem, addTask as apiAddTask, deleteTask as apiDeleteTask, getAllTasks as apiGetAllTasks, updateTask as apiUpdateTask } from '../utils/handle-api';
+import { addTask as apiAddTask, deleteTask as apiDeleteTask, getAllTasks as apiGetAllTasks, updateTask as apiUpdateTask } from '../utils/handle-api';
+import { Task } from '@/types/Task';
 
 type TaskPayload = {
     text: string;
@@ -10,7 +11,7 @@ type TaskPayload = {
 };
 
 interface TaskState {
-    tasks: TaskItem[];
+    tasks: Task[];
     loadTasks: () => Promise<void>;
     addTask: (task: TaskPayload) => Promise<void>;
     updateTask: (taskId: string, task: TaskPayload) => Promise<void>;
@@ -53,7 +54,7 @@ export const useTaskStore = create<TaskState>()(
             }
         }),
         {
-            name: 'tasks-storage-v2',
+            name: 'tasks-storage',
             storage: createJSONStorage(() => AsyncStorage),
         }
     )

@@ -4,11 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import Checkbox from 'expo-checkbox';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import TaskList from './src/components/TaskList';
-import { TaskItem } from './src/utils/handle-api';
+import { Task } from '@/types/Task';
 import { globalStyles } from './src/styles/global';
 import AboutScreen from './src/components/AboutScreen';
 // TODO (Zustand): Remova este useState e utilize o seletor da sua store para pegar as tasks
 import { useTaskStore } from './src/store/useTaskStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function App() {
   // TODO (Zustand): Remova este useState e utilize o seletor da sua store para pegar as tasks
@@ -31,6 +32,8 @@ export default function App() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [priority, setPriority] = useState<'Baixa' | 'Média' | 'Alta'>('Baixa');
 
+  const { token } = useAuthStore();
+
   useEffect(() => {
     const bootstrap = async () => {
       try {
@@ -41,7 +44,7 @@ export default function App() {
     };
 
     void bootstrap();
-  }, [loadTasks]);
+  }, [loadTasks, token]);
 
 
   const resetForm = () => {
@@ -54,7 +57,7 @@ export default function App() {
     setModalVisible(false);
   };
 
-  const updateMode = (task: TaskItem) => {
+  const updateMode = (task: Task) => {
     setIsUpdating(true);
     setTaskId(task._id);
     setText(task.text);
